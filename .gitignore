@@ -1,0 +1,11 @@
+﻿# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Screenshots folder (large files)
+screenshots/
+
+# OS files
+.DS_Store
+Thumbs.db

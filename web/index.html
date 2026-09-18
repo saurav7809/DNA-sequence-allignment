@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Parallel DNA Sequence Alignment </title>
+  <meta name="description" content="Interactive web dashboard for Needleman-Wunsch DNA sequence alignment with CUDA wavefront parallelism visualization."/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════ HEADER -->
+<header class="header">
+  <div class="dna-helix" aria-hidden="true">
+    <div class="helix-strand strand-1"></div>
+    <div class="helix-strand strand-2"></div>
+    <div class="helix-rungs" id="helixRungs"></div>
+  </div>
+  <div class="header-content">
+    <h1 class="hero-title">
+      <span class="title-parallel">Parallel</span>
+      <span class="title-dna">DNA</span>
+      <span class="title-align">Sequence Alignment</span>
+    </h1>
+    <p class="hero-sub">Needleman-Wunsch Algorithm · CUDA Wavefront Parallelism · Real-Time Performance Analysis</p>
+    <div class="stat-row">
+      <div class="stat"><span class="stat-val" id="statAlgorithm">Needleman-Wunsch</span><span class="stat-label">Algorithm</span></div>
+      <div class="stat-divider"></div>
+      <div class="stat"><span class="stat-val">O(m·n)</span><span class="stat-label">Time Complexity</span></div>
+      <div class="stat-divider"></div>
+      <div class="stat"><span class="stat-val" id="statCores">Multi-core</span><span class="stat-label">Parallel Engine</span></div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════ MAIN -->
+<main class="main">
+
+  <!-- ── SECTION 1: Sequence Input ── -->
+  <section class="section" id="sec-input">
+    <div class="section-header">
+      <div class="section-icon">🧬</div>
+      <div>
+        <h2 class="section-title">Sequence Aligner</h2>
+        <p class="section-desc">Enter DNA sequences to align. Max 30 characters each for matrix visualization.</p>
+      </div>
+    </div>
+
+    <div class="input-grid">
+      <div class="input-block">
+        <label class="input-label">
+          <span class="label-text">Sequence 1</span>
+          <button class="btn-small btn-gen" onclick="generateRandom(1)" title="Random sequence">⚡ Random</button>
+        </label>
+        <div class="seq-input-wrap">
+          <input id="seq1" class="seq-input" type="text" placeholder="e.g. ACGTACGT" maxlength="30"
+                 value="ACGTACGT" oninput="colorizeInput(this)" autocomplete="off" spellcheck="false"/>
+          <div id="seq1-colored" class="seq-preview"></div>
+        </div>
+        <div class="seq-length" id="len1">Length: 8</div>
+      </div>
+
+      <div class="vs-badge">VS</div>
+
+      <div class="input-block">
+        <label class="input-label">
+          <span class="label-text">Sequence 2</span>
+          <button class="btn-small btn-gen" onclick="generateRandom(2)" title="Random sequence">⚡ Random</button>
+        </label>
+        <div class="seq-input-wrap">
+          <input id="seq2" class="seq-input" type="text" placeholder="e.g. ACGTTCGT" maxlength="30"
+                 value="ACGTTCGT" oninput="colorizeInput(this)" autocomplete="off" spellcheck="false"/>
+          <div id="seq2-colored" class="seq-preview"></div>
+        </div>
+        <div class="seq-length" id="len2">Length: 8</div>
+      </div>
+    </div>
+
+    <!-- Scoring params -->
+    <div class="scoring-row">
+      <div class="score-param">
+        <label>Match</label>
+        <input id="scoreMatch" type="number" value="2" class="score-input"/>
+      </div>
+      <div class="score-param">
+        <label>Mismatch</label>
+        <input id="scoreMismatch" type="number" value="-1" class="score-input"/>
+      </div>
+      <div class="score-param">
+        <label>Gap</label>
+        <input id="scoreGap" type="number" value="-2" class="score-input"/>
+      </div>
+      <button class="btn-align" id="btnAlign" onclick="runAlignment()">
+        <span id="btnAlignText">▶ Run Alignment</span>
+        <div class="btn-spinner" id="btnSpinner" style="display:none"></div>
+      </button>
+    </div>
+
+    <div class="error-box" id="errorBox" style="display:none"></div>
+  </section>
+
+  <!-- ── SECTION 2: Results ── -->
+  <section class="section" id="sec-results" style="display:none">
+    <div class="section-header">
+      <div class="section-icon">📊</div>
+      <div>
+        <h2 class="section-title">Alignment Results</h2>
+        <p class="section-desc">CPU sequential vs wavefront parallel comparison</p>
+      </div>
+    </div>
+
+    <div class="results-grid">
+      <div class="result-card card-cpu">
+        <div class="card-label">CPU Sequential</div>
+        <div class="card-score" id="cpuScore">—</div>
+        <div class="card-sub">Alignment Score</div>
+        <div class="card-time" id="cpuTime">— ms</div>
+        <div class="card-sub">Execution Time</div>
+      </div>
+      <div class="result-card card-validation" id="validationCard">
+        <div class="val-icon" id="valIcon">✓</div>
+        <div class="val-text" id="valText">MATCH</div>
+        <div class="speedup-label">Speedup</div>
+        <div class="speedup-val" id="speedupVal">—</div>
+      </div>
+      <div class="result-card card-gpu">
+        <div class="card-label">Wavefront Parallel</div>
+        <div class="card-score" id="gpuScore">—</div>
+        <div class="card-sub">Alignment Score</div>
+        <div class="card-time" id="gpuTime">— ms</div>
+        <div class="card-sub">Execution Time</div>
+      </div>
+    </div>
+
+    <!-- Scoring info -->
+    <div class="scoring-info" id="scoringInfo"></div>
+  </section>
+
+  <!-- ── SECTION 3: DP Matrix Visualizer ── -->
+  <section class="section" id="sec-matrix" style="display:none">
+    <div class="section-header">
+      <div class="section-icon">🔢</div>
+      <div>
+        <h2 class="section-title">DP Matrix Visualizer</h2>
+        <p class="section-desc">Watch the wavefront anti-diagonal sweep fill the DP table in real time</p>
+      </div>
+    </div>
+    <div class="matrix-controls">
+      <button class="btn-small btn-play" id="btnPlay" onclick="playAnimation()">▶ Play Wavefront</button>
+      <button class="btn-small btn-reset" onclick="resetMatrix()">↺ Reset</button>
+      <label class="speed-label">Speed:
+        <input type="range" id="animSpeed" min="50" max="800" value="300" class="speed-slider"/>
+      </label>
+      <div class="legend-row">
+        <span class="legend-dot dot-init"></span><span>Init</span>
+        <span class="legend-dot dot-active"></span><span>Active Diagonal</span>
+        <span class="legend-dot dot-done"></span><span>Computed</span>
+        <span class="legend-dot dot-final"></span><span>Final Score</span>
+      </div>
+    </div>
+    <div class="matrix-scroll">
+      <div class="matrix-wrap" id="matrixWrap"></div>
+    </div>
+    <div class="diag-info" id="diagInfo">Press Play to start animation</div>
+  </section>
+
+  <!-- ── SECTION 4: Benchmark ── -->
+  <section class="section" id="sec-benchmark">
+    <div class="section-header">
+      <div class="section-icon">⚡</div>
+      <div>
+        <h2 class="section-title">Performance Benchmark</h2>
+        <p class="section-desc">Compare CPU vs Wavefront across multiple sequence lengths</p>
+      </div>
+    </div>
+
+    <div class="bench-config">
+      <div class="bench-opt">
+        <label>Sizes (bp)</label>
+        <div class="size-chips" id="sizeChips">
+          <button class="chip active" data-size="100">100</button>
+          <button class="chip active" data-size="250">250</button>
+          <button class="chip active" data-size="500">500</button>
+          <button class="chip active" data-size="750">750</button>
+          <button class="chip active" data-size="1000">1000</button>
+        </div>
+      </div>
+      <div class="bench-opt">
+        <label>Trials per size</label>
+        <select id="trials" class="score-input">
+          <option value="1">1</option>
+          <option value="2" selected>2</option>
+          <option value="3">3</option>
+        </select>
+      </div>
+      <button class="btn-align btn-bench" id="btnBench" onclick="runBenchmark()">
+        <span id="btnBenchText">⚡ Run Benchmark</span>
+        <div class="btn-spinner" id="benchSpinner" style="display:none"></div>
+      </button>
+    </div>
+
+    <div id="benchResults" style="display:none">
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h3 class="chart-title">Execution Time (ms)</h3>
+          <canvas id="chartTime"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3 class="chart-title">Speedup (Wavefront / CPU)</h3>
+          <canvas id="chartSpeedup"></canvas>
+        </div>
+      </div>
+      <div class="bench-table-wrap">
+        <table class="bench-table" id="benchTable">
+          <thead>
+            <tr>
+              <th>Size (bp)</th>
+              <th>CPU Time</th>
+              <th>Wavefront Time</th>
+              <th>Speedup</th>
+              <th>Validation</th>
+            </tr>
+          </thead>
+          <tbody id="benchTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── SECTION 5: About / Algorithm ── -->
+  <section class="section" id="sec-about">
+    <div class="section-header">
+      <div class="section-icon">📚</div>
+      <div>
+        <h2 class="section-title">Algorithm Overview</h2>
+        <p class="section-desc">Needleman-Wunsch with CUDA Wavefront Parallelism</p>
+      </div>
+    </div>
+    <div class="algo-grid">
+      <div class="algo-card">
+        <h3>🔄 Recurrence</h3>
+        <div class="formula">dp[i][j] = max(<br/>
+          &nbsp;&nbsp;dp[i-1][j-1] + score(s1[i], s2[j]),<br/>
+          &nbsp;&nbsp;dp[i-1][j] + gap,<br/>
+          &nbsp;&nbsp;dp[i][j-1] + gap<br/>
+        )</div>
+      </div>
+      <div class="algo-card">
+        <h3>⚡ Wavefront Key Insight</h3>
+        <p>All cells on the same <strong>anti-diagonal</strong> (i+j = constant) are <strong>independent</strong> — they can be computed in parallel. Each diagonal is one CUDA kernel launch.</p>
+      </div>
+      <div class="algo-card">
+        <h3>🏗️ CUDA Architecture</h3>
+        <p>One thread per cell on the anti-diagonal. <code>cudaDeviceSynchronize()</code> between diagonals acts as a global barrier — identical to this dashboard's animation steps.</p>
+      </div>
+      <div class="algo-card">
+        <h3>📊 Scoring Scheme</h3>
+        <table class="score-table">
+          <tr><td>Match</td><td class="score-pos">+2</td></tr>
+          <tr><td>Mismatch</td><td class="score-neg">-1</td></tr>
+          <tr><td>Gap</td><td class="score-neg">-2</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <p>Parallel Computing · BCS702 · CCA 1 · Sem VII Sec D &nbsp;|&nbsp; Needleman-Wunsch + CUDA Wavefront</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

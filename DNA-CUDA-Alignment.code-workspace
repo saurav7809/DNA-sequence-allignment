@@ -1,0 +1,112 @@
+{
+    "folders": [
+        {
+            "name": "DNA-CUDA-Alignment (BCS702 CCA-1)",
+            "path": "."
+        }
+    ],
+    "settings": {
+        "files.associations": {
+            "*.cu": "cuda-cpp"
+        },
+        "editor.tabSize": 4,
+        "editor.insertSpaces": true,
+        "terminal.integrated.defaultProfile.windows": "PowerShell",
+        "terminal.integrated.env.windows": {
+            "PYTHONIOENCODING": "utf-8"
+        },
+        "editor.rulers": [80, 120],
+        "files.exclude": {
+            "**/__pycache__": true,
+            "**/*.pyc": true
+        }
+    },
+    "launch": {
+        "version": "0.2.0",
+        "configurations": [
+            {
+                "name": "Validate: ACGT vs ACT",
+                "type": "python",
+                "request": "launch",
+                "program": "${workspaceFolder}/dna_align.py",
+                "args": ["--validate"],
+                "console": "integratedTerminal",
+                "env": { "PYTHONIOENCODING": "utf-8" }
+            },
+            {
+                "name": "Benchmark: 500 to 8000 bp",
+                "type": "python",
+                "request": "launch",
+                "program": "${workspaceFolder}/dna_align.py",
+                "args": ["--benchmark"],
+                "console": "integratedTerminal",
+                "env": { "PYTHONIOENCODING": "utf-8" }
+            },
+            {
+                "name": "Interactive Menu",
+                "type": "python",
+                "request": "launch",
+                "program": "${workspaceFolder}/dna_align.py",
+                "console": "integratedTerminal",
+                "env": { "PYTHONIOENCODING": "utf-8" }
+            },
+            {
+                "name": "Generate Graphs",
+                "type": "python",
+                "request": "launch",
+                "program": "${workspaceFolder}/generate_graphs.py",
+                "args": ["--csv", "results/benchmark.csv", "--out", "results/"],
+                "console": "integratedTerminal"
+            }
+        ]
+    },
+    "tasks": {
+        "version": "2.0.0",
+        "tasks": [
+            {
+                "label": "Run: Quick Validation",
+                "type": "shell",
+                "command": "python dna_align.py --validate",
+                "options": {
+                    "env": { "PYTHONIOENCODING": "utf-8" }
+                },
+                "group": "test",
+                "presentation": {
+                    "reveal": "always",
+                    "panel": "new"
+                }
+            },
+            {
+                "label": "Run: Full Benchmark",
+                "type": "shell",
+                "command": "python dna_align.py --benchmark",
+                "options": {
+                    "env": { "PYTHONIOENCODING": "utf-8" }
+                },
+                "group": "build",
+                "presentation": {
+                    "reveal": "always",
+                    "panel": "new"
+                }
+            },
+            {
+                "label": "Compile CUDA (nvcc)",
+                "type": "shell",
+                "command": "nvcc -O2 -arch=sm_75 -o dna_align.exe src/main.cu",
+                "group": "build",
+                "presentation": {
+                    "reveal": "always",
+                    "panel": "shared"
+                },
+                "problemMatcher": []
+            }
+        ]
+    },
+    "extensions": {
+        "recommendations": [
+            "ms-python.python",
+            "nvidia.nsight-vscode-edition",
+            "ms-vscode.cpptools"
+        ]
+    }
+}
