@@ -33,6 +33,7 @@ This project implements **DNA sequence alignment** using the **Needleman-Wunsch*
 | **GPU (CUDA Parallel)** | Fills the DP matrix diagonal-by-diagonal using CUDA threads |
 
 The program measures execution time for both modes, validates that scores match, calculates speedup, and exports results to a CSV for graph generation.
+This project implements the **Needleman-Wunsch** global sequence alignment algorithm in both **CPU (C++)** and **GPU (CUDA)** to demonstrate the performance benefits of parallel computing in bioinformatics.
 
 ---
 
@@ -378,4 +379,5 @@ A: A version number (e.g., 8.6) indicating the GPU's supported CUDA features and
 A: Global device memory (DRAM on the GPU chip). It's accessible by all threads but is relatively slow compared to shared memory.
 
 **Q10. What is the time complexity of Needleman-Wunsch?**  
-A: O(m × n) time and space, where m and n are sequence lengths. For equal lengths, O(n²). The GPU reduces the practical time constant but not the asymptotic complexity.
+A: O(m × n) time and space, where m and n are sequence lengths. For equal lengths, O(n²). The GPU reduces the practical time constant but not the asymptotic complexity. 
+
