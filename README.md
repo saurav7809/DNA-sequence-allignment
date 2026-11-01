@@ -1,7 +1,7 @@
 # DNA Sequence Alignment Using CUDA
 
 > **Course:** Parallel Computing (BCS702) | Semester VII | Section D  
-> **Project:** CCA 1 — Parallel DNA Sequence Alignment  
+> **Project:** CCA 1 — Parallel DNA Sequence Alignment 7th sem 
 > **Algorithm:** Needleman-Wunsch Global Alignment with CUDA Wavefront Parallelism
 
 ---
